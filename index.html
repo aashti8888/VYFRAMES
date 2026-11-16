@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion Studio</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;height:100vh;display:flex;flex-direction:column;font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:#20232A;background:#F5F6F8;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:5px 9px;cursor:pointer}
+button:hover:not(:disabled){background:#F0EFFC}button.on{background:#6558D3;color:#fff;border-color:#6558D3}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #6558D3;outline-offset:1px}
+input,select,textarea{border:1px solid #E5E7EB;border-radius:6px;padding:4px 6px;background:#fff;width:100%;min-width:0}
+#top{display:flex;gap:6px;align-items:center;padding:6px 10px;background:#fff;border-bottom:1px solid #E5E7EB;flex-wrap:wrap}
+#top .sp{flex:1}#pname{width:170px;font-weight:600}.sep{width:1px;height:22px;background:#E5E7EB;margin:0 2px}
+main{flex:1;display:flex;min-height:0}
+aside{background:#fff;overflow:auto}
+#left{width:230px;border-right:1px solid #E5E7EB}#right{width:260px;border-left:1px solid #E5E7EB;padding:10px}
+h3{margin:0 0 8px;font-size:13px;text-transform:capitalize}
+.sec{padding:10px;border-bottom:1px solid #E5E7EB}.sec h3{display:flex;justify-content:space-between;align-items:center}
+.mut{color:#737985;font-size:12px;margin:6px 0}
+.ly,.pgr{display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:6px;cursor:pointer}
+.ly.s,.pgr.s{background:#ECEAFB}.ly span,.pgr span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ly button,.pgr button{padding:0 5px;border:0;background:none;color:#737985}
+#stage{flex:1;position:relative;overflow:hidden;touch-action:none;background-color:#F5F6F8;background-image:radial-gradient(#D4D7DE 1px,transparent 1px)}
+#world{position:absolute;left:0;top:0;transform-origin:0 0}
+#hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#20232A;color:#fff;padding:6px 12px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:80%}
+#hint.show{opacity:1}
+.el{position:absolute;pointer-events:auto}.el .el{pointer-events:auto}.el.lk{pointer-events:none}.el.cp{pointer-events:none}.el.cp>.in{pointer-events:auto}.el.lk>.in{pointer-events:none}
+.in{width:100%;height:100%}.tx{cursor:default}
+.fl{position:absolute;left:0;top:calc(-20px/var(--z));font-size:calc(12px/var(--z));color:#737985;white-space:nowrap}
+.sel::after{content:'';position:absolute;inset:0;outline:calc(1.5px/var(--z)) solid #6558D3;pointer-events:none}
+.h{position:absolute;width:calc(9px/var(--z));height:calc(9px/var(--z));background:#fff;border:calc(1.5px/var(--z)) solid #6558D3;border-radius:2px;transform:translate(-50%,-50%);z-index:5}
+.h[data-h=nw]{left:0;top:0;cursor:nwse-resize}.h[data-h=n]{left:50%;top:0;cursor:ns-resize}.h[data-h=ne]{left:100%;top:0;cursor:nesw-resize}.h[data-h=e]{left:100%;top:50%;cursor:ew-resize}
+.h[data-h=se]{left:100%;top:100%;cursor:nwse-resize}.h[data-h=s]{left:50%;top:100%;cursor:ns-resize}.h[data-h=sw]{left:0;top:100%;cursor:nesw-resize}.h[data-h=w]{left:0;top:50%;cursor:ew-resize}
+.h.rot{left:50%;top:calc(-26px/var(--z));border-radius:50%;cursor:grab}
+#right label{display:block;font-size:11px;color:#737985}#right label input,#right label select,#right label textarea{margin-top:2px;color:#20232A;font-size:13px}
+#right input[type=color]{padding:1px;height:28px}#right input[type=checkbox]{width:auto}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}.w2{grid-column:1/3}
+.modal{position:fixed;inset:0;background:rgba(32,35,42,.4);display:flex;align-items:center;justify-content:center;z-index:20}
+.modal>div{background:#fff;border-radius:12px;padding:24px;max-width:460px;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+.modal h2{margin:0 0 6px}.modal .row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.modal button.p{background:#6558D3;color:#fff;border-color:#6558D3}
+#xpv{display:none;position:fixed;top:12px;right:12px;z-index:10}
+.pv #top,.pv #left,.pv #right{display:none}.pv #xpv{display:block}.pv .fl,.pv .sel::after,.pv .h{display:none}
+.gl{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(101,88,211,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(101,88,211,.16) 1px,transparent 1px);background-size:8px 8px}
+#live{position:absolute;left:0;top:0;pointer-events:none}
+@media(max-width:900px){#left{display:none}#right{width:190px}#pname{width:110px}}
+</style></head>
+<body>
+<header id="top">
+ <input id="pname" aria-label="Project name" title="Project name">
+ <span class="sep"></span>
+ <span id="tools"></span>
+ <button id="imgb" title="Upload a PNG, JPG, WebP or SVG">Image…</button><button id="btnb" title="Add a clickable button">+ Button</button><button id="fontb" title="Import your own font file (.ttf, .otf, .woff, .woff2)">Fonts…</button><button id="pausb" title="Pause or resume motion while you edit">Pause motion</button><input type="file" id="ff" accept=".ttf,.otf,.woff,.woff2" hidden>
+ <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+ <input type="file" id="file2" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+ <input type="file" id="imp" accept=".json" hidden>
+ <span class="sep"></span>
+ <button id="un" title="Undo (Ctrl+Z)">Undo</button><button id="re" title="Redo (Ctrl+Shift+Z)">Redo</button>
+ <span class="sp"></span>
+ <button id="zo" title="Zoom out">−</button><span id="zl" style="min-width:42px;text-align:center"></span><button id="zi" title="Zoom in">+</button><button id="fit" title="Fit everything on screen">Fit</button><button id="gridb" title="Show an 8 px layout grid on frames">Grid</button><button id="snapb" class="on" title="Snap to other objects while dragging (hold Ctrl to switch off temporarily)">Snap</button>
+ <span class="sep"></span>
+ <button id="pvb" title="Preview without panels; animations play">Preview</button>
+ <button id="exp" title="Download the project as a .json file">Save project file</button>
+ <button id="impb" title="Open a saved project file">Open project file</button>
+ <button disabled title="Planned: PNG export is not built yet">Export PNG (planned)</button>
+</header>
+<main>
+ <aside id="left">
+  <div class="sec"><h3>Pages <button id="addpg" title="Add page">+</button></h3><div id="pages"></div></div>
+  <div class="sec"><h3>Layers</h3><div id="layers"></div></div>
+ </aside>
+ <div id="stage"><div id="world"></div><div id="hint"></div></div>
+ <aside id="right"></aside>
+</main>
+<button id="xpv">Exit preview (Esc)</button>
+<div class="modal" id="welcome"><div>
+ <h2>Welcome to Motion Studio</h2>
+ <p>Design screens on a free canvas, then bring your own artwork to life.</p>
+ <p class="mut"><b>Canvas</b> (centre): draw frames, shapes and text. <b>Layers</b> (left): pick, hide, lock and reorder. <b>Properties</b> (right): change whatever is selected. Everything saves in this browser only — use "Save project file" to keep a copy.</p>
+ <div class="row"><button class="p" id="wsample">Open sample project</button><button id="wblank">Create blank project</button><button id="wcont" style="display:none">Continue last session</button></div>
+</div></div>
+<script>
+/* ===== DOCUMENT MODEL =====
+   doc = { name, pages:[{id,name,els:[]}] }. Every object is an "element" in a page's flat list.
+   Elements inside a frame have par = frame id and coordinates relative to that frame.
+   Image data lives in `assets` (kept apart so undo history stays small and originals are never changed). */
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let doc,assets={},sel=[],pg=0,tool='v',view={x:60,y:50,z:.6},undoS=[],redoS=[],last='',drag=null,space=false,pv=false,lastClick=[0,0],warned=0,gridOn=false,snapOn=true,penPts=[],penLast=0,brush={t:'pencil',sz:3,col:'#20232A'};
+const uid=()=>Math.random().toString(36).slice(2,9),P=()=>doc.pages[pg],E=id=>P().els.find(e=>e.id==id);
+const st=$('#stage'),wd=$('#world');
+function mk(t,o){const d={id:uid(),type:t,name:t[0].toUpperCase()+t.slice(1),x:0,y:0,w:100,h:100,r:0,o:1,vis:true,lock:false,par:null,ac:{d:'none',t:''},fill:'#E9E7FB',stroke:'#6558D3',sw:0,rad:0,an:{p:'none',spd:1,rng:15,pv:'bottom',on:false,tr:'always',key:'',pf:true}};
+ if(t=='text')Object.assign(d,{t:'Text',fs:16,fw:400,ff:'system-ui,sans-serif',ta:'left',lh:1.4,ls:0,col:'#20232A',w:200,h:30,fill:'transparent'});
+ if(t=='frame')Object.assign(d,{fill:'#FFFFFF',w:800,h:500});
+ if(t=='image')Object.assign(d,{asset:'',fit:'contain',fill:'transparent'});
+ return Object.assign(d,o)}
+/* ===== HISTORY (undo/redo): each committed change stores a full snapshot of the document ===== */
+const snap=()=>JSON.stringify(doc);
+function save(){try{localStorage.setItem('mds1',JSON.stringify({doc,assets}))}catch(e){if(!warned++)note('Browser storage is full, so autosave stopped. Use "Save project file" to keep your work.')}}
+function commit(){const c=snap();if(c==last)return;undoS.push(last);if(undoS.length>100)undoS.shift();redoS=[];last=c;save();syncBtns()}
+function restore(s){doc=JSON.parse(s);pg=Math.min(pg,doc.pages.length-1);sel=sel.filter(i=>E(i));renderAll();save()}
+function undo(){if(!undoS.length)return;redoS.push(last);last=undoS.pop();restore(last)}
+function redo(){if(!redoS.length)return;undoS.push(last);last=redoS.pop();restore(last)}
+function syncBtns(){$('#un').disabled=!undoS.length;$('#re').disabled=!redoS.length}
+function load(d,a){doc=d;assets=a;pg=0;sel=[];undoS=[];redoS=[];last=snap();regFonts();$('#pname').value=doc.name;renderAll();syncBtns();fit()}
+/* ===== RENDERING: the document is drawn as absolutely positioned HTML elements ===== */
+function rEl(e){
+ if(!vis(e))return'';
+ const s=sel.includes(e.id),k=P().els.filter(c=>c.par==e.id);
+ let is=`background:${e.type=='path'?'none':e.fill};transform:${base(e)};`+(e.sh?`box-shadow:0 ${e.sh/3}px ${e.sh}px rgba(32,35,42,.3);`:''),c='';
+ if(e.type!='text'&&e.type!='path')is+=(e.sw?`border:${e.sw}px solid ${e.stroke};`:'')+`border-radius:${e.type=='ellipse'?'50%':e.rad+'px'};`;
+ if(e.type=='frame'&&e.cc!==false)is+='overflow:hidden;';
+ if(e.crop)is+=`clip-path:inset(${e.crop[1]*100}% ${(1-e.crop[2])*100}% ${(1-e.crop[3])*100}% ${e.crop[0]*100}%);`;
+ if(e.type=='text'){is+=`color:${e.col};font:${e.fw} ${e.fs}px/${e.lh} ${e.ff};letter-spacing:${e.ls}px;text-align:${e.ta};white-space:pre-wrap;word-break:break-word;font-style:${e.st||'normal'};text-decoration:${e.td||'none'};text-transform:${e.tc||'none'};`;c=esc(e.t)}
+ if(e.type=='image')c=`<img src="${assets[e.asset]||''}" draggable="false" alt="" style="width:100%;height:100%;object-fit:${e.fit};border-radius:inherit;display:block;${e.holes&&e.holes.length?holeMask(e.holes):''}">`;
+ if(e.type=='frame')c=k.map(rEl).join('');
+ if(e.lb&&(e.type=='rect'||e.type=='ellipse'))c=`<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:0 8px;color:${e.lc||'#fff'};font:600 15px system-ui,sans-serif;text-align:center">${esc(e.lb)}</div>`;
+ if(e.type=='path')c=`<svg width="100%" height="100%" viewBox="0 0 ${e.vb[0]} ${e.vb[1]}" preserveAspectRatio="none" style="overflow:visible;display:block"><path d="${pathD(e)}" fill="${e.cl?e.fill:'none'}" stroke="${e.stroke}" stroke-width="${e.sw}" stroke-linecap="${e.cap||'round'}" stroke-linejoin="round"/></svg>`;
+ const hd=s&&sel.length==1&&!e.lock&&!pv?['nw','n','ne','e','se','s','sw','w'].map(h=>`<i class="h" data-h="${h}"></i>`).join('')+(e.type!='frame'?'<i class="h rot" data-h="rot"></i>':''):'';
+ const zi=drag&&drag.k=='mv'&&drag.o.some(x=>x[0]==e.id)?'z-index:9;':'';
+ const mpv=s&&e.mp&&e.mp.length>1?`<svg style="position:absolute;left:50%;top:50%;overflow:visible;pointer-events:none;transform:rotate(${-e.r}deg);transform-origin:0 0" width="1" height="1"><polyline points="${e.mp.map(q=>q.join(',')).join(' ')}" fill="none" stroke="#6558D3" stroke-width="${2/view.z}" stroke-dasharray="${6/view.z} ${4/view.z}"/></svg>`:'';
+ return`<div class="el${s?' sel':''}${e.lock?' lk':''}${e.crop?' cp':''}" data-id="${e.id}" style="${zi}left:${e.x}px;top:${e.y}px;width:${e.w}px;height:${e.h}px;opacity:${e.o};transform:rotate(${e.r}deg)">${e.type=='frame'?`<span class="fl">${esc(e.name)}</span>`:''}<div class="in${e.type=='text'?' tx':''}" style="${is}">${c}</div>${e.type=='frame'&&gridOn?'<div class="gl"></div>':''}${mpv}${hd}</div>`}
+function renderCanvas(){wd.innerHTML=P().els.filter(e=>!e.par).map(rEl).join('')}
+function applyView(){wd.style.transform=`translate(${view.x}px,${view.y}px) scale(${view.z})`;wd.style.setProperty('--z',view.z);st.style.backgroundSize=`${24*view.z}px ${24*view.z}px`;st.style.backgroundPosition=`${view.x}px ${view.y}px`;$('#zl').textContent=Math.round(view.z*100)+'%'}
+function zoomAt(mx,my,f){const z=Math.min(4,Math.max(.1,view.z*f));view.x=mx-(mx-view.x)*z/view.z;view.y=my-(my-view.y)*z/view.z;view.z=z;applyView()}
+function fit(fr){const els=fr?[fr]:P().els.filter(e=>!e.par);if(!els.length)return;const x0=Math.min(...els.map(e=>e.x)),y0=Math.min(...els.map(e=>e.y)),x1=Math.max(...els.map(e=>e.x+e.w)),y1=Math.max(...els.map(e=>e.y+e.h)),r=st.getBoundingClientRect();
+ view.z=Math.min(r.width/(x1-x0+120),r.height/(y1-y0+120),1.5);view.x=(r.width-(x1-x0)*view.z)/2-x0*view.z;view.y=(r.height-(y1-y0)*view.z)/2-y0*view.z;applyView()}
+function renderTools(){st.style.cursor=tool=='v'?'':tool=='h'?'grab':'crosshair';$('#tools').innerHTML=[['v','Select'],['h','Pan'],['f','Frame'],['r','Rectangle'],['o','Ellipse'],['t','Text'],['p','Pen'],['b','Brush'],['m','Motion path'],['g','Paint bucket'],['x','Cut part']].map(([k,l])=>`<button data-t="${k}" class="${tool==k?'on':''}" title="${l} (${k.toUpperCase()})">${l}</button>`).join(' ')}
+function renderLayers(){
+ const els=P().els,row=(e,d)=>`<div class="ly${sel.includes(e.id)?' s':''}" data-id="${e.id}" style="padding-left:${6+d*14}px"><button data-a="vis" title="Show or hide">${e.vis?'◉':'○'}</button><button data-a="lock" title="Lock or unlock">${e.lock?'▣':'▢'}</button><span>${esc(e.name)}</span>${sel.includes(e.id)?'<button data-a="up" title="Bring forward">▲</button><button data-a="dn" title="Send backward">▼</button>':''}</div>`;
+ $('#layers').innerHTML=els.filter(e=>!e.par).reverse().map(e=>row(e,0)+(e.type=='frame'?els.filter(k=>k.par==e.id).reverse().map(k=>row(k,1)).join(''):'')).join('')||'<p class="mut">Nothing here yet. Pick the Frame tool and drag on the canvas.</p>';
+ $('#pages').innerHTML=doc.pages.map((p,i)=>`<div class="pgr${i==pg?' s':''}" data-i="${i}"><span>${esc(p.name)}</span><button data-a="ren" title="Rename">✎</button>${doc.pages.length>1?'<button data-a="delp" title="Delete page">✕</button>':''}</div>`).join('')}
+const get=(e,k)=>k.split('.').reduce((o,p)=>o&&o[p],e),setK=(e,k,v)=>{const p=k.split('.');if(p.length==2){e[p[0]]=e[p[0]]||{};e[p[0]][p[1]]=v}else e[k]=v};
+const hex=v=>/^#[0-9a-f]{6}$/i.test(v)?v:'#ffffff';
+function renderInsp(){
+ const e=E(sel[0]),b=$('#right'),bp='pbg'.includes(tool)?`<h3>${{b:'Brush',g:'Paint bucket'}[tool]||'Pen'}</h3><div class="g">${tool=='b'?`<label>Brush<select data-bk="t">${Object.keys(BR).map(k=>`<option value="${k}"${brush.t==k?' selected':''}>${k[0].toUpperCase()+k.slice(1)}</option>`).join('')}</select></label>`:''}${tool=='g'?'':`<label>Size<input type="range" data-bk="sz" min="1" max="30" value="${brush.sz}"></label>`}<label>Colour<input type="color" data-bk="col" value="${brush.col}"></label></div><p class="mut">${tool=='g'?'Click any object to fill it with this colour (text gets coloured, open lines get a new stroke colour).':tool=='b'?'Drag on the canvas to paint.':'Click to add points. Double-click or press Enter to finish. Click the first point to close the shape.'}</p>`:'';
+ if(!e){b.innerHTML=bp+'<h3>Properties</h3><p class="mut">Select an object to edit it. Draw with the tools above, or add an image.</p><p class="mut">Drag on empty canvas to select several objects (Alt+drag works over a frame). Shortcuts: V select, H pan, F frame, R rectangle, O ellipse, T text, P pen, B brush, M motion path, [ send to back, ] bring to front. Ctrl+Z undo, Ctrl+D duplicate, Delete remove, arrows nudge. Space+drag pans; Ctrl+scroll zooms; double-click text to edit.</p>';return}
+ const n=(l,k,a='')=>`<label>${l}<input type="number" data-k="${k}" value="${Math.round((get(e,k)||(k=='pp'?800:0))*100)/100}" ${a}></label>`,
+ c=(l,k)=>`<label>${l}<input type="color" data-k="${k}" value="${hex(get(e,k))}"></label>`,
+ sl=(l,k,o)=>`<label>${l}<select data-k="${k}">${o.map(([v,t])=>`<option value="${v}"${get(e,k)==v?' selected':''}>${t}</option>`).join('')}</select></label>`;
+ let h=bp+`<h3>${e.type}</h3><div class="g"><label class="w2">Name<input data-k="name" value="${esc(e.name)}"></label>${n('X','x')}${n('Y','y')}${n('Width','w','min=1')}${n('Height','h','min=1')}${e.type!='frame'?n('Rotation °','r'):''}${n('Opacity','o','min=0 max=1 step=.05')}</div>`;
+ if(e.type=='text')h+=`<div class="g"><label class="w2">Text<textarea rows="3" data-k="t">${esc(e.t)}</textarea></label>${sl('Font','ff',fontList())}${n('Size','fs','min=1')}${sl('Weight','fw',[[300,'Light'],[400,'Regular'],[500,'Medium'],[600,'Semibold'],[700,'Bold'],[800,'Extra bold']])}${sl('Align','ta',[['left','Left'],['center','Center'],['right','Right']])}${n('Line height','lh','step=.1')}${n('Letter spacing','ls','step=.1')}${c('Colour','col')}${sl('Style','st',[['normal','Normal'],['italic','Italic']])}${sl('Decoration','td',[['none','None'],['underline','Underline'],['line-through','Strikethrough']])}${sl('Case','tc',[['none','As typed'],['uppercase','UPPERCASE'],['lowercase','lowercase'],['capitalize','Capitalize']])}<button data-a="fimp">Import my font…</button><label>Google font name<input data-gf placeholder="e.g. Poppins"></label></div>`;
+ else h+=`<div class="g">${c('Fill','fill')}${c('Stroke','stroke')}${n('Stroke width','sw','min=0')}${e.type!='ellipse'&&e.type!='path'?n('Corner radius','rad','min=0'):''}${e.type=='path'?`<label><input type="checkbox" data-k="cl" ${e.cl?'checked':''}> Closed shape</label><label><input type="checkbox" data-k="sm" ${e.sm?'checked':''}> Smooth curves</label>`:''}${e.type=='frame'?`<label class="w2"><input type="checkbox" data-k="cc" ${e.cc!==false?'checked':''}> Clip content to this frame</label>`:''}${e.type=='rect'||e.type=='ellipse'?`<label class="w2">Label (turns it into a button)<input data-k="lb" value="${esc(e.lb||'')}"></label>${c('Label colour','lc')}`:''}</div>`;
+ if(e.type=='image')h+=`<div class="g">${sl('Fit','fit',[['contain','Contain'],['cover','Cover'],['fill','Fill']])}<button data-a="repl" style="align-self:end">Replace image…</button></div>`;
+ const ac=e.ac||{d:'none',t:''},tg=P().els.filter(o=>o.id!=e.id),op=(v,l,c)=>`<option value="${v}"${c?' selected':''}>${esc(l)}</option>`;
+ h+=`<h3>Interaction (works in Preview)</h3><div class="g"><label>On click<select data-k="ac.d">${[['none','Do nothing'],['show','Show'],['hide','Hide'],['toggle','Show / hide'],['page','Go to page'],['play','Start motion'],['stop','Stop motion']].map(([v,l])=>op(v,l,ac.d==v)).join('')}</select></label><label>Target<select data-k="ac.t">${ac.d=='page'?doc.pages.map((q,i)=>op(i,q.name,ac.t==i)).join(''):tg.map(o=>op(o.id,o.name,ac.t==o.id)).join('')}</select></label><label class="w2"><input type="checkbox" data-k="ph" ${e.ph?'checked':''}> Start hidden in Preview</label></div>`;
+ h+=`<h3>Transform &amp; 3D</h3><p class="mut">Perspective only shows when a Tilt is not 0. Try the quick buttons.</p><div class="g">${n('Skew X °','kx')}${n('Skew Y °','ky')}${n('Tilt X °','tx')}${n('Tilt Y °','ty')}${n('Perspective','pp','min=100')}${n('Shadow','sh','min=0')}<button data-a="t3" data-v="l">Tilt left</button><button data-a="t3" data-v="r">Tilt right</button><button data-a="t3" data-v="b">Tilt back</button><button data-a="t3" data-v="x">Reset 3D</button><button data-a="fliph">Flip horizontal</button><button data-a="flipv">Flip vertical</button><button data-a="mirror">Mirror copy</button><span></span><button data-a="front">Bring to front</button><button data-a="back">Send to back</button></div>`;
+ h+=`<h3>Motion</h3><p class="mut">Moves the whole object. Splitting artwork into parts and adding bones is planned, not built yet. To draw a route for the object to follow, use the Motion path tool.</p><div class="g">${sl('Preset','an.p',[['none','None'],['wag','Wag'],['sway','Sway'],['flap','Flap'],['blink','Blink'],['bounce','Bounce'],['pulse','Pulse']])}${sl('Pivot','an.pv',[['bottom','Bottom'],['top','Top'],['left','Left'],['right','Right'],['center','Centre']])}<label class="w2">Moves together with<select data-k="fw">${op('','Nothing',!e.fw)}${tg.map(o=>op(o.id,o.name,e.fw==o.id)).join('')}</select></label>${sl('When','an.tr',[['always','Always (loop)'],['click','On click (toggle)'],['hover','While hovering'],['scroll','While scrolling'],['key','While a key is held']])}<label>Key (for key / scroll)<input data-k="an.key" maxlength="1" value="${esc(e.an.key||'')}" placeholder="e.g. s"></label>${e.mp?`<label class="w2"><input type="checkbox" data-k="an.pf" ${e.an.pf!==false?'checked':''}> Follow motion path</label>`:''}<label>Speed<input type="range" data-k="an.spd" min=".2" max="4" step=".1" value="${e.an.spd}"></label><label>Range<input type="range" data-k="an.rng" min="1" max="60" value="${e.an.rng}"></label><label><input type="checkbox" data-k="an.on" ${e.an.on?'checked':''}> Playing now (when set to Always)</label>${e.mp?'<button data-a="clrmp">Clear motion path</button>':''}</div><div class="g"><button data-a="dup">Duplicate</button><button data-a="del">Delete</button>${e.par?'<button data-a="unpar" class="w2">Take out of frame</button>':''}</div>`;
+ b.innerHTML=h}
+function renderAll(){renderCanvas();renderLayers();renderInsp();renderTools()}
+function note(m){const h=$('#hint');h.textContent=m;h.classList.add('show');clearTimeout(note.t);note.t=setTimeout(()=>h.classList.remove('show'),3500)}
+/* ===== ACTIONS ===== */
+function defParent(){const s=E(sel[0]),f=s&&(s.type=='frame'?s:E(s.par));return f||P().els.find(e=>e.type=='frame')||null}
+function place(e){const n=P().els.filter(q=>q.type==e.type).length+1;if(!e.nm)e.name=e.type[0].toUpperCase()+e.type.slice(1)+' '+n;P().els.push(e);sel=[e.id]}
+function del(){const ids=new Set(sel);P().els=P().els.filter(e=>!ids.has(e.id)&&!ids.has(e.par));sel=[];commit();renderAll()}
+function dup(m){const out=[];sel.forEach(i=>{const e=E(i);if(!e||sel.includes(e.par))return;const cl=o=>{const c=JSON.parse(JSON.stringify(o));c.id=uid();return c},c=cl(e),A=P().els;c.name=e.name+(m?' mirror':' copy');
+ if(e.type=='frame'){c.x=e.x+e.w+80;c.y=e.y}else{c.x=m?e.x+e.w+20:e.x+24;c.y=e.y+(m?0:24)}if(m)c.fx=!e.fx;
+ A.splice(A.indexOf(e)+1,0,c);out.push(c.id);if(e.type=='frame')A.filter(k=>k.par==e.id).forEach(k=>{const kc=cl(k);kc.par=c.id;A.push(kc)})});
+ sel=out;commit();renderAll();note(out.length?'Duplicated.':'Select something to duplicate first.')}
+function mv(id,d){const e=E(id),sib=P().els.filter(q=>q.par==e.par),i=sib.indexOf(e),j=i+d;if(j<0||j>=sib.length)return;const A=P().els,a=A.indexOf(sib[i]),b=A.indexOf(sib[j]);[A[a],A[b]]=[A[b],A[a]];commit();renderAll()}
+function addImage(f,rep){if(!f)return;const r=new FileReader();r.onload=()=>{const id=uid();assets[id]=r.result;if(rep){const e=E(sel[0]);if(e){e.asset=id;commit();renderAll();save()}return}
+ const im=new Image();im.onload=()=>{const nw=im.naturalWidth||300,nh=im.naturalHeight||300,s=Math.min(1,360/Math.max(nw,nh)),w=Math.round(nw*s),h=Math.round(nh*s),p=defParent(),rc=st.getBoundingClientRect();
+  const e=mk('image',{asset:id,w,h,par:p?p.id:null,name:f.name.replace(/\.[^.]+$/,'').slice(0,24)||'Image',x:p?Math.round((p.w-w)/2):Math.round((rc.width/2-view.x)/view.z-w/2),y:p?Math.round((p.h-h)/2):Math.round((rc.height/2-view.y)/view.z-h/2)});e.nm=1;place(e);commit();renderAll();save();note('Image added. Pick a Motion preset on the right to animate it.')};im.src=r.result};r.readAsDataURL(f)}
+function editText(id){const n=wd.querySelector(`.el[data-id="${id}"]>.tx`);if(!n)return;n.contentEditable=true;n.focus();getSelection().selectAllChildren(n);n.onkeydown=k=>{if(k.key=='Escape')n.blur();k.stopPropagation()};n.onblur=()=>{n.contentEditable=false;const e=E(id);if(e){e.t=n.innerText;commit()}renderAll()}}
+function frameAt(x,y){return[...P().els].reverse().find(f=>f.type=='frame'&&f.vis&&!f.lock&&x>=f.x&&x<=f.x+f.w&&y>=f.y&&y<=f.y+f.h)}
+function togglePv(){pv=!pv;ov={};run={};hov=new Set();document.body.classList.toggle('pv',pv);if(pv){const f=E(sel[0]);sel=[];tool='v';renderCanvas();setTimeout(()=>fit(f&&f.type=='frame'?f:P().els.find(q=>q.type=='frame')),30)}else{renderAll();setTimeout(()=>fit(),30)}}
+/* ===== POINTER INTERACTION: pan, draw, move, resize, rotate ===== */
+const toW=ev=>{const r=st.getBoundingClientRect();return[(ev.clientX-r.left-view.x)/view.z,(ev.clientY-r.top-view.y)/view.z]};
+st.addEventListener('pointerdown',ev=>{
+ if(pv){hit(ev,id=>{const e=E(id);if(!e)return false;let u=0;if(e.an&&e.an.tr=='click'){run[id]=!run[id];u=1}if(e.ac&&e.ac.d!='none'){doAct(e.ac);u=1}return u});return}
+ if(ev.target.closest('[contenteditable=true]'))return;
+ const[wx,wy]=toW(ev),h=ev.target.closest('.h'),n=ev.target.closest('.el');
+ if(ev.button==1||space||tool=='h'){drag={k:'pan',sx:ev.clientX,sy:ev.clientY,vx:view.x,vy:view.y};return}
+ if(ev.button)return;
+ if(tool=='g'){const e=n&&E(n.dataset.id);if(e){if(e.type=='text')e.col=brush.col;else if(e.type=='path'&&!e.cl)e.stroke=brush.col;else e.fill=brush.col;sel=[e.id];commit();renderAll()}return}
+ if(tool=='x'){const e=n&&E(n.dataset.id);if(!e||e.type!='image'||e.r||e.crop){note('Cut part works on an upright image (not on a part that is already cut).');return}drag={k:'cut',e,a:ab(e),sx:wx,sy:wy};return}
+ if(tool=='p'){penAdd(wx,wy);return}
+ if(tool=='b'){drag={k:'brush',pts:[[wx,wy]]};return}
+ if(tool=='m'){const id=n&&n.dataset.id;if(!E(sel[0])&&id){sel=[id];renderAll()}if(!E(sel[0])){note('Click an object first, then drag to draw its motion path.');return}drag={k:'mpath',pts:[[wx,wy]],n:id};return}
+ if(h&&n){const e=E(sel[0]),b=n.getBoundingClientRect();drag={k:h.dataset.h=='rot'?'rot':'rs',h:h.dataset.h,sx:wx,sy:wy,o:{...e},cx:b.left+b.width/2,cy:b.top+b.height/2,e};return}
+ if('frot'.includes(tool)&&tool!='v'&&tool!='h'){const T={f:'frame',r:'rect',o:'ellipse',t:'text'}[tool],pf=tool=='f'?null:frameAt(wx,wy),e=mk(T,{x:Math.round(wx-(pf?pf.x:0)),y:Math.round(wy-(pf?pf.y:0)),w:1,h:1,par:pf?pf.id:null});place(e);drag={k:'draw',e,sx:wx,sy:wy,ox:pf?pf.x:0,oy:pf?pf.y:0};renderAll();return}
+ if(n&&!ev.altKey){const id=n.dataset.id,now=Date.now(),dbl=lastClick[0]==id&&now-lastClick[1]<350;lastClick=[id,now];
+  if(ev.shiftKey)sel=sel.includes(id)?sel.filter(i=>i!=id):[...sel,id];else if(!sel.includes(id))sel=[id];
+  renderAll();if(dbl&&E(id).type=='text'){setTimeout(()=>editText(id),0);return}
+  drag={k:'mv',sx:wx,sy:wy,o:sel.map(i=>{const e=E(i);const q=ab(e);return[i,q.x,q.y,e.par]}).filter(a=>!a[3]||!sel.includes(a[3]))};return}
+ if(!ev.shiftKey)sel=[];drag={k:'marq',sx:wx,sy:wy,base:[...sel]};renderAll()});
+addEventListener('pointermove',ev=>{if(!drag){if(tool=='p'&&penPts.length){const[x,y]=toW(ev);penLive(x,y)}return}const d=drag;
+ if(d.k=='pan'){view.x=d.vx+ev.clientX-d.sx;view.y=d.vy+ev.clientY-d.sy;applyView();return}
+ const[wx,wy]=toW(ev),dx=wx-d.sx,dy=wy-d.sy;d.moved=1;
+ if(d.k=='brush'){d.pts.push([wx,wy]);live(polyHtml(d.pts,brush.col,brushW(),brushO()));return}
+ if(d.k=='mpath'){d.pts.push([wx,wy]);live(polyHtml(d.pts,'#6558D3',2/view.z,1,1));return}
+ if(d.k=='marq'){marq(d,wx,wy);return}
+ if(d.k=='cut'){d.ex=wx;d.ey=wy;live(`<div style="position:absolute;left:${Math.min(d.sx,wx)}px;top:${Math.min(d.sy,wy)}px;width:${Math.abs(dx)}px;height:${Math.abs(dy)}px;border:${1.5/view.z}px dashed #6558D3;background:rgba(101,88,211,.12)"></div>`);return}
+ if(d.k=='mv'){const[i0,ax0,ay0]=d.o[0],e0=E(i0);let X=ax0+dx,Y=ay0+dy;d.g='';
+  if(snapOn&&!ev.ctrlKey&&!ev.metaKey){const r=snapXY(d.o.map(o=>o[0]),X,Y,e0.w,e0.h);X=r[3]?r[0]:gridOn?Math.round(r[0]/8)*8:Math.round(r[0]);Y=r[4]?r[1]:gridOn?Math.round(r[1]/8)*8:Math.round(r[1]);d.g=r[2]}else{X=Math.round(X);Y=Math.round(Y)}
+  const ddx=X-ax0,ddy=Y-ay0;d.o.forEach(([i,ax,ay])=>{const e=E(i);if(!e)return;const A=ax+ddx,B=ay+ddy;if(e.type=='frame'){e.x=A;e.y=B;return}e.par=null;e.x=A;e.y=B})}
+ else if(d.k=='draw'){const e=d.e;e.x=sn(Math.min(d.sx,wx)-d.ox);e.y=sn(Math.min(d.sy,wy)-d.oy);e.w=sn(Math.abs(dx));e.h=sn(Math.abs(dy))}
+ else if(d.k=='rot'){let a=Math.atan2(ev.clientY-d.cy,ev.clientX-d.cx)*180/Math.PI+90;if(ev.shiftKey)a=Math.round(a/15)*15;d.e.r=Math.round(((a%360)+360)%360)}
+ else if(d.k=='rs'){const o=d.o,r=o.r*Math.PI/180,c=Math.cos(r),s=Math.sin(r),lx=dx*c+dy*s,ly=-dx*s+dy*c,H=d.h,sx=H.includes('e')?1:H.includes('w')?-1:0,sy=H.includes('s')?1:H.includes('n')?-1:0,
+  w=Math.max(4,o.w+sx*lx),h=Math.max(4,o.h+sy*ly),ex=sx*(w-o.w)/2,ey=sy*(h-o.h)/2,cx=o.x+o.w/2+ex*c-ey*s,cy=o.y+o.h/2+ex*s+ey*c;
+  Object.assign(d.e,{w:Math.max(4,sn(w)),h:Math.max(4,sn(h)),x:sn(cx-w/2),y:sn(cy-h/2)})}
+ renderAll();if(d.k=='mv'&&d.g)live(d.g)});
+addEventListener('pointerup',()=>{if(!drag)return;const d=drag;drag=null;
+ if(d.k=='mv'&&d.moved)dropIn(d);
+ if(d.k=='brush'){endBrush(d);return}
+ if(d.k=='mpath'){endMotion(d);return}
+ if(d.k=='marq'){clearLive();renderAll();return}
+ if(d.k=='cut'){endCut(d);return}
+ if(d.k=='draw'){const e=d.e;if(e.w<5&&e.h<5)Object.assign(e,{frame:[800,500],rect:[120,80],ellipse:[100,100],text:[200,30]}[e.type]&&{w:{frame:800,rect:120,ellipse:100,text:200}[e.type],h:{frame:500,rect:80,ellipse:100,text:30}[e.type]});tool='v';commit();renderAll();if(e.type=='text')setTimeout(()=>editText(e.id),0);return}
+ if(d.moved)commit();renderAll()});
+st.addEventListener('wheel',ev=>{ev.preventDefault();if(pv){scrollT=Date.now();return}const r=st.getBoundingClientRect();if(ev.ctrlKey||ev.metaKey)zoomAt(ev.clientX-r.left,ev.clientY-r.top,ev.deltaY<0?1.1:1/1.1);else{view.x-=ev.deltaX;view.y-=ev.deltaY;applyView()}},{passive:false});
+/* ===== TOOLS: snapping, 3D transform, pen, brush, motion path, marquee, layer order ===== */
+const base=e=>`${e.tx||e.ty?`perspective(${e.pp||800}px) rotateX(${e.tx||0}deg) rotateY(${e.ty||0}deg) `:''}skew(${e.kx||0}deg,${e.ky||0}deg) scale(${e.fx?-1:1},${e.fy?-1:1})`;
+const sn=v=>snapOn&&gridOn?Math.round(v/8)*8:Math.round(v);
+function live(h){let l=$('#live');if(!l){l=document.createElement('div');l.id='live';wd.appendChild(l)}l.innerHTML=h}
+function clearLive(){const l=$('#live');if(l)l.remove()}
+const polyHtml=(p,c,w,o,d)=>`<svg style="position:absolute;left:0;top:0;overflow:visible" width="1" height="1"><polyline points="${p.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width="${w}" stroke-opacity="${o}" stroke-linecap="round" stroke-linejoin="round"${d?` stroke-dasharray="${6/view.z} ${4/view.z}"`:''}/></svg>`;
+const BR={pencil:[1,1,'round'],marker:[2.5,.95,'round'],highlighter:[5,.4,'butt']},brushW=()=>brush.sz*BR[brush.t][0],brushO=()=>BR[brush.t][1];
+function pathD(e){const p=e.pts;if(!p.length)return'';if(p.length<3||!e.sm)return'M'+p.map(q=>q.join(' ')).join('L')+(e.cl?'Z':'');let d=`M${p[0][0]} ${p[0][1]}`;for(let i=1;i<p.length-1;i++)d+=`Q${p[i][0]} ${p[i][1]} ${(p[i][0]+p[i+1][0])/2} ${(p[i][1]+p[i+1][1])/2}`;return d+`L${p[p.length-1][0]} ${p[p.length-1][1]}`+(e.cl?'Z':'')}
+function makePath(pts,o){const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x0=Math.min(...xs),y0=Math.min(...ys),w=Math.max(1,Math.round(Math.max(...xs)-x0)),h=Math.max(1,Math.round(Math.max(...ys)-y0)),pf=frameAt(pts[0][0],pts[0][1]);
+ const e=mk('path',{x:Math.round(x0-(pf?pf.x:0)),y:Math.round(y0-(pf?pf.y:0)),w,h,par:pf?pf.id:null,fill:'none',pts:pts.map(p=>[Math.round((p[0]-x0)*10)/10,Math.round((p[1]-y0)*10)/10]),vb:[w,h],cl:false,sm:true,...o});place(e);return e}
+function endBrush(d){clearLive();const p=d.pts.filter((q,i,a)=>i==0||i==a.length-1||Math.hypot(q[0]-a[i-1][0],q[1]-a[i-1][1])>2);if(p.length<2)p.push([p[0][0]+.5,p[0][1]]);
+ makePath(p,{name:brush.t[0].toUpperCase()+brush.t.slice(1)+' stroke',nm:1,stroke:brush.col,sw:brushW(),o:brushO(),cap:BR[brush.t][2]});commit();renderAll()}
+function penLive(x,y){live(polyHtml([...penPts,[x,y]],brush.col,Math.max(1,brush.sz),1))}
+function penAdd(x,y){const now=Date.now();if(penPts.length&&now-penLast<300){penEnd(false);return}penLast=now;if(penPts.length>2&&Math.hypot(x-penPts[0][0],y-penPts[0][1])<10/view.z){penEnd(true);return}penPts.push([x,y]);penLive(x,y)}
+function penEnd(cl){clearLive();if(penPts.length>1){makePath(penPts,{name:'Pen path',nm:1,stroke:brush.col,sw:Math.max(1,brush.sz),cl,sm:false,fill:cl?'#E9E7FB':'none',cap:'round'});commit()}penPts=[];renderAll()}
+function endMotion(d){clearLive();const e=E(sel[0]);if(e&&d.pts.length>2){const p0=d.pts[0];e.mp=d.pts.filter((q,i,a)=>i%3==0||i==a.length-1).map(q=>[Math.round(q[0]-p0[0]),Math.round(q[1]-p0[1])]);e.an.on=true;e.an.pf=true;commit();note('Motion path set for "'+e.name+'". It plays together with any preset motion, until you untick Playing.');setTool('v')}
+ else if(d.n&&d.n!=sel[0]&&E(d.n)){sel=[d.n];note('Selected "'+E(d.n).name+'". Now drag to draw its path.')}else note('Drag a longer line to draw a motion path.');renderAll()}
+const ab=e=>{const p=E(e.par);return{x:e.x+(p?p.x:0),y:e.y+(p?p.y:0),w:e.w,h:e.h}};
+function marq(d,wx,wy){const x0=Math.min(d.sx,wx),y0=Math.min(d.sy,wy),x1=Math.max(d.sx,wx),y1=Math.max(d.sy,wy);
+ const hit=P().els.filter(e=>{if(!e.vis||e.lock)return false;const a=ab(e);return e.type=='frame'?a.x>=x0&&a.y>=y0&&a.x+a.w<=x1&&a.y+a.h<=y1:a.x<x1&&a.x+a.w>x0&&a.y<y1&&a.y+a.h>y0}).map(e=>e.id);
+ sel=[...new Set([...d.base,...hit])];renderAll();live(`<div style="position:absolute;left:${x0}px;top:${y0}px;width:${x1-x0}px;height:${y1-y0}px;background:rgba(101,88,211,.1);border:${1/view.z}px solid #6558D3"></div>`)}
+function order(id,front){const e=E(id),A=P().els;if(!e)return;A.splice(A.indexOf(e),1);const q=A.filter(o=>o.par==e.par);if(!q.length)A.push(e);else{const i=A.indexOf(front?q[q.length-1]:q[0]);A.splice(front?i+1:i,0,e)}commit();renderAll()}
+function setTool(t){if(tool=='p'&&t!='p'&&penPts.length)penEnd(false);tool=t;renderTools();if(!sel.length||'pbg'.includes(t))renderInsp();if(t=='x')note('Drag a box over part of an image to cut it out. Motion is paused while you cut.')}
+const holeMask=h=>{const d='M0 0H1V1H0Z'+h.map(([l,t,r,b])=>`M${l} ${t}V${b}H${r}V${t}Z`).join(''),u='url(data:image/svg+xml,'+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><path fill-rule='evenodd' d='${d}'/></svg>`).replace(/'/g,'%27')+')';return`-webkit-mask-image:${u};mask-image:${u};-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;`};
+const orgFor=e=>{const c=e.crop;if(!c)return ORG[e.an.pv];const[l,t,r,b]=c,m=(l+r)*50,v=(t+b)*50;return{bottom:`${m}% ${b*100}%`,top:`${m}% ${t*100}%`,left:`${l*100}% ${v}%`,right:`${r*100}% ${v}%`,center:`${m}% ${v}%`}[e.an.pv]};
+function endCut(d){clearLive();if(d.ex==null)return;const e=d.e,a=d.a,cl=v=>Math.min(1,Math.max(0,v)),l=cl((Math.min(d.sx,d.ex)-a.x)/a.w),r=cl((Math.max(d.sx,d.ex)-a.x)/a.w),t=cl((Math.min(d.sy,d.ey)-a.y)/a.h),b=cl((Math.max(d.sy,d.ey)-a.y)/a.h);
+ if(r-l<.02||b-t<.02){note('That box is too small. Drag a bigger one.');return}
+ const c=JSON.parse(JSON.stringify(e)),A=P().els;c.id=uid();c.name='Part '+(A.filter(q=>q.crop).length+1);c.crop=[l,t,r,b];c.holes=[];c.fit='fill';c.an={p:'none',spd:1,rng:15,pv:'bottom',on:false,tr:'always',key:'',pf:true};delete c.mp;
+ e.holes=[...(e.holes||[]),[l,t,r,b]];e.fit='fill';A.splice(A.indexOf(e)+1,0,c);sel=[c.id];setTool('v');commit();renderAll();note('Part cut. Choose a Motion preset and pivot for it on the right.')}
+let paused=false,run={},ov={},tpm={},hov=new Set(),scrollT=0;const keys={};
+const vis=e=>e.vis&&(pv?(ov[e.id]!==undefined?ov[e.id]:!e.ph):true);
+function hit(ev,fn){let n=ev.target.closest('.el');while(n){if(fn(n.dataset.id))return;n=n.parentElement.closest('.el')}}
+function doAct(a){const t=a.t;if(a.d=='page'){pg=+t||0;sel=[];renderCanvas();setTimeout(()=>fit(P().els.find(q=>q.type=='frame')),0);return}const e=E(t);if(!e)return;
+ if(a.d=='show')ov[t]=true;if(a.d=='hide')ov[t]=false;if(a.d=='toggle')ov[t]=!vis(e);if(a.d=='play')run[t]=true;if(a.d=='stop')run[t]=false;renderCanvas()}
+st.addEventListener('pointerover',ev=>{if(!pv)return;hov=new Set();let n=ev.target.closest('.el');while(n){hov.add(n.dataset.id);n=n.parentElement.closest('.el')}});
+st.addEventListener('pointerleave',()=>{hov=new Set()});
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1});addEventListener('keyup',e=>{delete keys[e.key.toLowerCase()]});addEventListener('blur',()=>{for(const k in keys)delete keys[k]});
+function snapXY(ids,X,Y,w,h){const th=6/view.z;let bx=null,by=null;const cand=P().els.filter(o=>o.vis&&!ids.includes(o.id)&&!ids.includes(o.par)).map(ab),xs=[X,X+w/2,X+w],ys=[Y,Y+h/2,Y+h];
+ cand.forEach(c=>{[c.x,c.x+c.w/2,c.x+c.w].forEach(t=>xs.forEach(x=>{const d=t-x;if(Math.abs(d)<th&&(!bx||Math.abs(d)<Math.abs(bx.d)))bx={d,t,c}}));[c.y,c.y+c.h/2,c.y+c.h].forEach(t=>ys.forEach(y=>{const d=t-y;if(Math.abs(d)<th&&(!by||Math.abs(d)<Math.abs(by.d)))by={d,t,c}}))});
+ if(bx)X+=bx.d;if(by)Y+=by.d;const ln=(x1,y1,x2,y2)=>`<div style="position:absolute;left:${x1}px;top:${y1}px;width:${Math.max(x2-x1,1.5/view.z)}px;height:${Math.max(y2-y1,1.5/view.z)}px;background:#F24E1E"></div>`;let g='';
+ if(bx)g+=ln(bx.t,Math.min(Y,bx.c.y),bx.t,Math.max(Y+h,bx.c.y+bx.c.h));if(by)g+=ln(Math.min(X,by.c.x),by.t,Math.max(X+w,by.c.x+by.c.w),by.t);return[X,Y,g,!!bx,!!by]}
+const FB=[['system-ui,sans-serif','System sans'],['Georgia,serif','Georgia'],["'Times New Roman',serif",'Times New Roman'],['Arial,sans-serif','Arial'],['Helvetica,Arial,sans-serif','Helvetica'],['Verdana,sans-serif','Verdana'],["'Trebuchet MS',sans-serif",'Trebuchet'],['Tahoma,sans-serif','Tahoma'],["'Courier New',monospace",'Courier New'],['Impact,sans-serif','Impact'],["'Palatino Linotype',serif",'Palatino'],["'Comic Sans MS',cursive",'Comic Sans']];
+const fontList=()=>[...FB,...(doc.fonts||[]).map(n=>[`'${n}',sans-serif`,n+' (imported)']),...(doc.gf||[]).map(n=>[`'${n}',sans-serif`,n+' (Google)'])];
+const loadedF=new Set();
+function regFonts(){(doc.fonts||[]).forEach(n=>{if(assets['font:'+n]&&!loadedF.has(n)){loadedF.add(n);new FontFace(n,`url(${assets['font:'+n]})`).load().then(f=>{document.fonts.add(f);renderCanvas()}).catch(()=>loadedF.delete(n))}});
+ (doc.gf||[]).forEach(n=>{const id='gf-'+n.replace(/\W/g,'');if(!document.getElementById(id)){const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(n).replace(/%20/g,'+')+':wght@300;400;500;600;700;800&display=swap';document.head.appendChild(l)}})}
+function addGF(n){n=n.trim();if(!n)return;doc.gf=[...new Set([...(doc.gf||[]),n])];regFonts();const t=E(sel[0]);if(t&&t.type=='text')t.ff=`'${n}',sans-serif`;commit();renderAll();note('Google font "'+n+'" added. It needs an internet connection; check the spelling if the text does not change.')}
+function dropIn(d){const A=P().els;d.o.forEach(([i,,,op])=>{const e=E(i);if(!e||e.type=='frame')return;const q=ab(e),f=frameAt(q.x+e.w/2,q.y+e.h/2);if(f){e.par=f.id;e.x=q.x-f.x;e.y=q.y-f.y;if(f.id!=op)A.push(A.splice(A.indexOf(e),1)[0])}})}
+/* ===== KEYBOARD ===== */
+addEventListener('keydown',ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()=='d'&&!/TEXTAREA/.test(ev.target.tagName)&&!ev.target.isContentEditable){ev.preventDefault();dup();return}const t=ev.target;if(/INPUT|TEXTAREA|SELECT/.test(t.tagName)||t.isContentEditable)return;
+ const m=ev.ctrlKey||ev.metaKey,k=ev.key.toLowerCase();if(pv&&k!='escape')return;
+ if(k==' '){space=true;ev.preventDefault();return}
+ if(m&&k=='z'){ev.shiftKey?redo():undo();ev.preventDefault();return}
+ if(m&&k=='y'){redo();ev.preventDefault();return}
+ if(m&&k=='d'){dup();ev.preventDefault();return}
+ if(k=='escape'){if(pv)togglePv();else if(penPts.length)penEnd(false);else{sel=[];setTool('v');renderAll()}return}
+ if((k=='delete'||k=='backspace')&&sel.length){del();ev.preventDefault();return}
+ if(k.startsWith('arrow')&&sel.length){const s=ev.shiftKey?10:1;sel.forEach(i=>{const e=E(i);if(e&&!e.lock){if(k=='arrowleft')e.x-=s;if(k=='arrowright')e.x+=s;if(k=='arrowup')e.y-=s;if(k=='arrowdown')e.y+=s}});commit();renderAll();ev.preventDefault();return}
+ if(k=='enter'&&penPts.length){penEnd(false);return}if(k==']'&&sel.length){order(sel[0],1);return}if(k=='['&&sel.length){order(sel[0],0);return}if(!m&&'vhfrotpbmgx'.includes(k)&&k.length==1)setTool(k)});
+addEventListener('keyup',e=>{if(e.key==' ')space=false});
+/* ===== PANELS & TOOLBAR ===== */
+$('#tools').onclick=e=>{const b=e.target.closest('[data-t]');if(b)setTool(b.dataset.t)};
+$('#layers').onclick=e=>{const r=e.target.closest('.ly');if(!r)return;const id=r.dataset.id,a=e.target.closest('button'),el=E(id);
+ if(a&&a.dataset.a=='vis'){el.vis=!el.vis;commit()}else if(a&&a.dataset.a=='lock'){el.lock=!el.lock;commit()}else if(a&&a.dataset.a=='up'){mv(id,1);return}else if(a&&a.dataset.a=='dn'){mv(id,-1);return}
+ else sel=e.shiftKey?[...sel,id]:[id];renderAll()};
+$('#pages').onclick=e=>{const r=e.target.closest('.pgr');if(!r)return;const i=+r.dataset.i,a=e.target.closest('button');
+ if(a&&a.dataset.a=='ren'){const n=prompt('Page name',doc.pages[i].name);if(n){doc.pages[i].name=n;commit()}}
+ else if(a&&a.dataset.a=='delp'){if(confirm('Delete this page and everything on it?')){doc.pages.splice(i,1);pg=Math.min(pg,doc.pages.length-1);sel=[];commit()}}
+ else{pg=i;sel=[];fit()}renderAll()};
+$('#addpg').onclick=()=>{doc.pages.push({id:uid(),name:'Page '+(doc.pages.length+1),els:[mk('frame',{name:'Frame 1',w:1000,h:640})]});pg=doc.pages.length-1;sel=[];commit();renderAll();fit()};
+$('#right').addEventListener('input',ev=>{const t=ev.target,k=t.dataset.k;if(t.dataset.bk){brush[t.dataset.bk]=t.dataset.bk=='sz'?+t.value:t.value;return}if(!k)return;const v=t.type=='number'||t.type=='range'?parseFloat(t.value):t.type=='checkbox'?t.checked:t.value;if(typeof v=='number'&&isNaN(v))return;
+ (k=='name'||k=='t'?[sel[0]]:sel).forEach(i=>{const e=E(i);if(e)setK(e,k,v)});renderCanvas();if(k=='name')renderLayers()});
+$('#right').addEventListener('change',ev=>{const d=ev.target.dataset;if('gf' in d){addGF(ev.target.value);return}if(d.k){if(d.k=='fw'){const q=E(sel[0]);let c=q&&q.fw,g=0;while(c&&g++<50){if(c==q.id){q.fw='';note('Those two would follow each other. Choose a different object.');break}const o=E(c);c=o&&o.fw}}if(d.k=='ac.d'){const q=E(sel[0]);if(q)q.ac.t=q.ac.d=='page'?'0':(P().els.find(o=>o.id!=q.id)||{}).id||''}commit();renderLayers();if(d.k=='ac.d')renderInsp()}});
+$('#right').onclick=e=>{const a=e.target.dataset.a,q=E(sel[0]);if(a=='fimp')$('#ff').click();if(a=='unpar'){sel.forEach(i=>{const o=E(i);if(o&&o.par){const q=ab(o);o.par=null;o.x=q.x;o.y=q.y}});commit();renderAll()}if(a=='t3'&&q){const v=e.target.dataset.v,M={l:[0,-28],r:[0,28],b:[35,0],x:[0,0]}[v];Object.assign(q,{tx:M[0],ty:M[1],pp:700});if(v=='x')q.kx=q.ky=0;commit();renderAll()}if(a=='dup')dup();if(a=='del')del();if(a=='repl')$('#file2').click();if(a=='front')order(sel[0],1);if(a=='back')order(sel[0],0);if(a=='mirror')dup(1);
+ if(a=='fliph'||a=='flipv'){sel.forEach(i=>{const o=E(i);if(o){if(a=='fliph')o.fx=!o.fx;else o.fy=!o.fy}});commit();renderAll()}
+ if(a=='clrmp'&&q){delete q.mp;q.an.p='none';commit();renderAll()}};
+$('#gridb').onclick=()=>{gridOn=!gridOn;$('#gridb').classList.toggle('on',gridOn);renderCanvas()};
+$('#snapb').onclick=()=>{snapOn=!snapOn;$('#snapb').classList.toggle('on',snapOn);note(snapOn?'Snap on: dragging snaps to other objects (orange guides). Hold Ctrl to switch it off.':'Snap off.')};
+$('#fontb').onclick=()=>$('#ff').click();$('#pausb').onclick=()=>{paused=!paused;$('#pausb').classList.toggle('on',paused)};
+$('#btnb').onclick=()=>{const p=defParent(),rc=st.getBoundingClientRect(),e=mk('rect',{name:'Button',w:160,h:44,rad:22,fill:'#6558D3',lb:'Button',lc:'#FFFFFF',par:p?p.id:null,x:p?Math.round((p.w-160)/2):Math.round((rc.width/2-view.x)/view.z-80),y:p?Math.round((p.h-44)/2):Math.round((rc.height/2-view.y)/view.z-22)});e.nm=1;place(e);commit();renderAll();note('Button added. Select it and use Interaction on the right to choose what happens when it is clicked in Preview.')};
+$('#ff').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const n=f.name.replace(/\.[^.]+$/,'').replace(/[^\w \-]/g,'').slice(0,30)||'Custom font';assets['font:'+n]=r.result;doc.fonts=[...new Set([...(doc.fonts||[]),n])];regFonts();const t=E(sel[0]);if(t&&t.type=='text')t.ff=`'${n}',sans-serif`;commit();renderAll();save();note('Font "'+n+'" imported'+(t&&t.type=='text'?' and applied.':'. Select a text object and pick it from the Font list.'))};r.readAsDataURL(f);e.target.value=''};
+$('#imgb').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{addImage(e.target.files[0]);e.target.value=''};$('#file2').onchange=e=>{addImage(e.target.files[0],1);e.target.value=''};
+$('#un').onclick=undo;$('#re').onclick=redo;$('#fit').onclick=()=>fit();$('#pvb').onclick=togglePv;$('#xpv').onclick=togglePv;
+$('#zi').onclick=()=>{const r=st.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.2)};$('#zo').onclick=()=>{const r=st.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1/1.2)};
+$('#pname').onchange=e=>{doc.name=e.target.value||'Untitled';commit()};
+$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({doc,assets})],{type:'application/json'}));a.download=(doc.name||'project')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+$('#impb').onclick=()=>$('#imp').click();
+$('#imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j.doc||!j.doc.pages)throw 0;load(j.doc,j.assets||{});save()}catch(x){note('That file is not a Motion Studio project.')}};r.readAsText(f);e.target.value=''};
+/* ===== MOTION: presets driven by requestAnimationFrame (moves the whole object around its pivot) ===== */
+const ORG={bottom:'50% 100%',top:'50% 0',left:'0 50%',right:'100% 50%',center:'50% 50%'};
+function active(e){if(!pv&&(paused||tool=='x'))return false;const a=e.an,T=a.tr||'always';if(pv&&run[e.id]!==undefined)return run[e.id];if(T=='always')return a.on||pv;if(!pv)return false;const k=(a.key||'').toLowerCase();
+ if(T=='hover')return hov.has(e.id);if(T=='key')return !!keys[k||'s'];if(T=='scroll')return Date.now()-scrollT<500&&(!k||!!keys[k]);return false}
+function tick(t){wd.querySelectorAll('.el').forEach(n=>{const e=E(n.dataset.id),i=n.querySelector(':scope>.in');if(!e||!i)return;const a=e.an,pth=!!(a&&e.mp&&e.mp.length>1&&a.pf!==false),pr=!!a&&a.p!='none'&&a.p!='follow';
+ if(!(pth||pr)||!active(e)){const fp=e.fw?tpm[e.fw]||'':'';tpm[e.id]=fp;i.style.transform=fp+base(e);i.style.transformOrigin='';return}
+ const ph=t/1000*Math.PI*2*a.spd*.5,s=Math.sin(ph),R=a.rng;let tr='',tp='';
+ if(a.p=='wag')tr=`rotate(${s*R}deg)`;
+ if(a.p=='sway')tr=`rotate(${Math.sin(ph*.6)*R*.5}deg)`;
+ if(a.p=='flap')tr=`rotate(${s*R}deg) scaleY(${1-Math.abs(s)*R/80})`;
+ if(a.p=='bounce')tr=`translateY(${-Math.abs(s)*R}px)`;
+ if(a.p=='pulse')tr=`scale(${1+s*R/100})`;
+ if(a.p=='blink'){const q=(t/1000*a.spd*.4)%1;tr=`scaleY(${q<.08?1-.9*(1-Math.abs(q-.04)/.04):1})`}
+ if(pth){const m=e.mp,L=[0];for(let j=1;j<m.length;j++)L[j]=L[j-1]+Math.hypot(m[j][0]-m[j-1][0],m[j][1]-m[j-1][1]);const u=(1-Math.abs((t/1000*a.spd*.2)%2-1))*L[L.length-1];let j=1;while(j<m.length-1&&L[j]<u)j++;const f=(u-L[j-1])/((L[j]-L[j-1])||1);tp=`translate(${m[j-1][0]+(m[j][0]-m[j-1][0])*f}px,${m[j-1][1]+(m[j][1]-m[j-1][1])*f}px) `}
+ const fp=e.fw?tpm[e.fw]||'':'';tpm[e.id]=fp+tp+(a.p=='bounce'?tr+' ':'');i.style.transformOrigin=orgFor(e);i.style.transform=fp+tp+base(e)+' '+tr});requestAnimationFrame(tick)}
+requestAnimationFrame(tick);
+/* ===== SAMPLE & BLANK PROJECTS ===== */
+function sample(){
+ const F=mk('frame',{name:'Garden dashboard',w:1000,h:620}),a=[F],add=(t,o)=>{const e=mk(t,{par:F.id,...o});a.push(e);return e};
+ add('rect',{name:'Sidebar',w:200,h:620,fill:'#20232A'});
+ add('text',{name:'Logo',x:24,y:24,w:150,t:'Fernwood',fs:20,fw:700,col:'#FFFFFF'});
+ ['Overview','Plants','Schedule'].forEach((s,i)=>add('text',{name:'Nav '+s,x:24,y:90+i*34,w:150,t:s,col:i?'#A9AEBB':'#FFFFFF',fw:i?400:600}));
+ add('text',{name:'Heading',x:230,y:28,w:500,h:40,t:'Garden overview',fs:28,fw:700});
+ add('text',{name:'Subheading',x:230,y:72,w:500,t:'Three things need attention today.',col:'#737985'});
+ [['Watered today','12','#EEF0FB'],['Need light','3','#FFF3E3'],['Healthy','28','#E8F5EC']].forEach(([l,v,f],i)=>{add('rect',{name:'Card '+l,x:230+i*250,y:120,w:230,h:120,fill:f,rad:12});add('text',{name:'Value '+l,x:250+i*250,y:136,w:190,h:48,t:v,fs:40,fw:700});add('text',{name:'Label '+l,x:250+i*250,y:196,w:190,t:l,col:'#737985'})});
+ add('rect',{name:'Chart card',x:230,y:270,w:430,h:300,fill:'#F5F6F8',rad:12});
+ add('text',{name:'Chart title',x:254,y:288,w:300,t:'Growth this week (cm)',fw:600});
+ [60,110,80,150,120,170].forEach((h,i)=>add('rect',{name:'Bar '+(i+1),x:262+i*62,y:550-h,w:40,h,fill:'#6558D3',rad:6}));
+ const svg="<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 240'><path d='M70 170h60l-8 60H78z' fill='#B8845A'/><path d='M100 175V90' stroke='#4A8C5C' stroke-width='6' fill='none'/><path d='M100 125C60 125 40 95 44 68c34 4 56 26 56 57z' fill='#58A86C'/><path d='M100 105c40 0 60-30 56-56-34 4-56 26-56 56z' fill='#74C186'/></svg>";
+ assets.plant='data:image/svg+xml,'+encodeURIComponent(svg);
+ const p=add('image',{name:'Fern (animated)',asset:'plant',x:720,y:290,w:220,h:264,fit:'contain'});p.an={p:'sway',spd:1,rng:12,pv:'bottom',on:true};
+ add('rect',{name:'Button',x:740,y:70,w:190,h:44,fill:'#6558D3',rad:22});add('text',{name:'Button label',x:740,y:80,w:190,t:'Add a plant',ta:'center',fw:600,col:'#FFFFFF'});
+ return{name:'Sample project',pages:[{id:uid(),name:'Dashboard',els:a}]}}
+const blank=()=>({name:'Untitled project',pages:[{id:uid(),name:'Page 1',els:[mk('frame',{name:'Frame 1',w:1000,h:640})]}]});
+const saved=(()=>{try{return JSON.parse(localStorage.getItem('mds1'))}catch(e){return null}})();
+if(saved&&saved.doc)$('#wcont').style.display='';
+const close=()=>$('#welcome').remove();
+$('#wsample').onclick=()=>{assets={};load(sample(),assets);save();close()};
+$('#wblank').onclick=()=>{load(blank(),{});save();close()};
+$('#wcont').onclick=()=>{load(saved.doc,saved.assets||{});close()};
+addEventListener('resize',()=>fit());
+assets={};load(sample(),assets);
+</script></body></html>
